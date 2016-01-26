@@ -1,30 +1,37 @@
 <!doctype html>
 <html lang="ru">
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
-    <title>Задачи GTD</title>
-
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+<link rel="stylesheet" href="css/style.css">
+<title>Задачи GTD</title>
 </head>
-<body>
+<body class="container">
+	<video width="800" height="600" controls="controls" poster="poster.jpg">
+	    <source src="norwegian-army-harlem-shake.ogv" />
+	    <source src="norwegian-army-harlem-shake.mp4" />
+	</video>
+	<h1>Задачи GTD</h1>
 	<div id="app">
-		Hello, world
+		<div class="description">
+			Завершай свои задачи. Завершай вовремя.
+		</div>
+		<div class="tasks-types container">
+			<ul id="nav-tasks" class="nav nav-pills">
+			</ul>
+		</div>
+		<div class="tasks container-list container" id="tasks-container">
+		</div>
+
 	</div>
 
 <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 <script type="text/javascript" src="js/application.js"></script>
+<script type="text/javascript" src="_BX25/api.js"></script>
 <script src="//api.bitrix24.com/api/v1/"></script>
-
-<script>
-    $(document).ready(function () {
-		BX24.init(function(){
-			app.showTasks();
-		});
-    });
-</script>
 
 </body>
 </html>

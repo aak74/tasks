@@ -1,0 +1,82 @@
+.task.priority0 {
+	border-left: 3px solid #bbb;
+}
+.task.priority1 {
+	border-left: 3px solid #5CB85C;
+}
+.task.priority2 {
+	border-left: 3px solid #cc2020;
+}
+
+.task.closed {
+	opacity: 0.5;
+	display: none;
+}
+
+.task.almost-closed {
+	border-right: 3px solid #E8AF35;
+	/*border-left: 6px solid #E8AF35;*/
+	/*opacity: 0.5;*/
+}
+.task.almost-closed .task-title{
+	text-decoration: line-through;
+}
+
+.tasks.container-list {
+	margin-bottom: 10em;
+}
+.task-tools {
+	opacity: 1 !important;
+}
+.task-tools ul{
+	background-color: #fff !important;
+	opacity: 1 !important;
+}
+
+.task-group {
+	/*position:absolute;*/
+	/*font-size: 1.2em;*/
+	margin-top: 2em;
+}
+
+.task-group a {
+	color: #000 !important;
+}
+
+#akop-alerter {
+	position: absolute;
+	left: 2em;
+	bottom: 2em;
+	z-index: 1000;
+}
+
+.menu-create-but {
+	-moz-box-sizing: content-box !important;
+	box-sizing:	content-box !important;
+}
+
+#nav-tasks .label {
+  position: absolute !important;
+  right: -0.9em !important;
+  top: -0.5em !important;
+  z-index: 100;
+  font-size: 90%;
+}
+
+#nav-tasks {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.task-main .label {
+  position: absolute !important;
+  left: -22px !important;
+  top: -20px !important;
+  z-index: 100;
+  font-size: 1em;
+}
+
+
+.task-status-overdue {
+	color: #cc2020 !important;
+}
