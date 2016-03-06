@@ -1,3 +1,59 @@
+.tasks-types {
+	margin-bottom: 12px;
+}
+
+ul.folder-kind {
+	list-style: none;
+	min-height: 124px;
+	border-left: 3px solid #ccc;
+	/*
+	-webkit-box-shadow: 3px 3px 5px 0px rgba(0,0,0,0.13);
+	-moz-box-shadow: 3px 3px 5px 0px rgba(0,0,0,0.13);
+	box-shadow: 3px 3px 5px 0px rgba(0,0,0,0.13);
+	*/
+}
+
+ul.folder-kind > li {
+	list-style: none;
+	font-size: 16px;
+	line-height: 20px;
+}
+ul.folder-kind > li > a {
+	border-radius: 0;
+}
+
+ul.folder-kind-system {
+  	border-color: #357ebd;
+} 
+
+ul.folder-kind-system > li.active > a {
+	background-color: #357ebd !important;
+}
+
+ul.folder-kind-till {
+  	border-color: #398439;
+} 
+
+ul.folder-kind-till > li.active > a {
+	background-color: #398439 !important;
+}
+
+ul.folder-kind-importance {
+  	border-color: #eea236;
+} 
+
+ul.folder-kind-importance > li.active > a {
+	background-color: #eea236 !important;
+}
+
+ul.folder-kind-folder {
+  	border-color: #ccc;
+} 
+
+ul.folder-kind-folder > li.active > a {
+	background-color: #ccc !important;
+}
+
 .task.priority0 {
 	border-left: 3px solid #bbb;
 }
@@ -80,3 +136,4 @@
 .task-status-overdue {
 	color: #cc2020 !important;
 }
+

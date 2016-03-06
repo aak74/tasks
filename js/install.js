@@ -1,3 +1,4 @@
+;(function() {
 var install = {
 
 	prepareEntity: function (arEntityDesc) {
@@ -19,6 +20,7 @@ var install = {
 
 
 	start: function () {
+		console.log("start 1");
 		
 		// define storages
 		var tasksEntity = {
@@ -33,37 +35,31 @@ var install = {
 		
 		var arEntityBatch = this.prepareEntity(tasksEntity);
 
-		BX24.callBatch(arEntityBatch, 
-		
+		BX24.callBatch(
+			arEntityBatch, 
 			function (result) {
-				if (result.error()) {
-					app.displayErrorMessage('К сожалению, произошла ошибка установки прилоджения. Попробуйте переустановить приложение позже');
-					console.error(result.error());
+				console.log(result);
+				if (result.error) {
+					app.displayErrorMessage('К сожалению, произошла ошибка установки приложения. Попробуйте переустановить приложение позже');
+					console.error(result.error);
 				} else {
 					BX24.installFinish();
 				}
 			}
-		});	
+		);
+		console.log("start 2");
 		
 	}
 }
 
+console.log("start", BX24);
+var isInit = false;
 
-$(document).ready(function () {
-	BX24.init(function (e) {
-		console.log("init", e);
-		return true;
-	});
-
-	console.log("isInit", BX24, BX24.isInit);
-
-	// Подмена функций для тестирования приложения
-	if (typeof BX24.isInit != "undefined") {
-		console.log("install");
-		install.start();
-	} else {
-		console.log("false start");
-	}
-
+BX24.init(function (e) {
+	console.log("init", e);
+	isInit = true;
+	console.log("install");
+	install.start();
 });
 
+})();

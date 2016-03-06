@@ -1,20 +1,22 @@
+;(function() {
 // var pathName = "/bitrix/tools/akop.tasks/";
 
 tasks = {
 	userId: 0,
 	tasks: [],
+	tasksFolders: [],
 	extData: {
 		tasks: []
 	},
 	folders: [
-		{"type": "ALL", "name": "Все", "kind": "system"}, // 1
 		{"type": "INBOX", "name": "Входящие", "kind": "system"}, // 1
+		{"type": "ALL", "name": "Все", "kind": "system"}, // 1
 		{"type": "TODAY", "name": "Сегодня", "kind": "till"}, // 2
 		{"type": "TOMORROW", "name": "Завтра", "kind": "till"}, // 2
 		{"type": "WEEK", "name": "Неделя", "kind": "till"}, // 2
-		{"type": "FOCUS", "name": "Важно", "kind": "folder"}, // 3
-		{"type": "NORMAL", "name": "Стандарт", "kind": "folder"}, // 3
-		{"type": "MAYBE", "name": "Возможно", "kind": "folder"}, // 3
+		{"type": "FOCUS", "name": "Важно", "kind": "importance"}, // 3
+		{"type": "NORMAL", "name": "Стандарт", "kind": "importance"}, // 3
+		{"type": "MAYBE", "name": "Возможно", "kind": "importance"}, // 3
 		{"type": "WAITINGFOR", "name": "Ждем", "kind": "folder"}, // 4
 		{"type": "FAST", "name": "Быстрые дела", "kind": "folder"}, // 4
 		{"type": "STUPID", "name": "Рутина", "kind": "folder"}, // 4
@@ -23,15 +25,14 @@ tasks = {
 // разделить на столбцы
 
 	getTasks: function () {
-		// var curapp = this;
-
+		tasks.isReady = 0;
 		BX24.callMethod(
 			'task.item.list', 
 			[],
 			function(result) {
 				if ( result.error() ) {
 					displayErrorMessage('К сожалению, произошла ошибка получения задач. Попробуйте повторить позже');
-					console.error(result.error());
+					console.error('getTasks error', result.error());
 				} else {
 					var data = result.data();
 					console.log('data', data);
@@ -44,7 +45,7 @@ tasks = {
 					if ( result.more() ) {
 						result.next();
 					} else {
-						console.log('Получены все данные');
+						console.log('getTasks. Получены все данные');
 						console.log('tasks', tasks.tasks);
 						tasks.showTasks();
 
@@ -52,7 +53,45 @@ tasks = {
 						
 				}
 			}
-		);	
+		);
+	},
+
+	getTasksFolders: function () {
+		tasks.getTasksFolders();
+/*		
+		BX24.callMethod(
+			'entity.item.get', 
+			{
+			    ENTITY: 'tasks',
+			    SORT: {},
+			    FILTER: {'TASK_ID':'1'}
+			},
+			function(result) {
+				if ( result.error() ) {
+					displayErrorMessage('К сожалению, произошла ошибка получения папок задач. Попробуйте повторить позже');
+					console.error('getTasksFolders error', result.error());
+				} else {
+					var data = result.data();
+					console.log('data', data);
+					
+					for ( var task in data ) {
+						console.log(task.ID);
+						tasks.tasksFolders[data[task].TASK_ID] = data[task];
+					}
+								
+					if ( result.more() ) {
+						result.next();
+					} else {
+						console.log('getTasksFolders. Получены все данные');
+						console.log('tasks', tasks.tasksFolders);
+						tasks.showTasks();
+
+					}
+						
+				}
+			}
+		); 
+	*/
 	},
 
 	getTask: function (obj) {
@@ -89,7 +128,6 @@ tasks = {
 
 	// Перемещает задачи в другую папку
 	moveToFolder: function () {
-		// var curapp = this;
 		// tasks.action.call(this, "moveToFolder");
 		var taskId = tasks.getTaskId(this);
 		params = {
@@ -113,10 +151,6 @@ tasks = {
 	},
 
 	action: function (filename) {
-		// var curapp = this;
-
-
-		// var curapp = this;
 		// akop.debug.log("moveToFolder", this, this.dataset.folder);
 		var $taskDiv = tasks.getTask(this);
 		var taskId = tasks.getId($taskDiv);
@@ -179,13 +213,12 @@ tasks = {
 
 	// Показывает задачи
 	showTasks: function () {
-		var curapp = this;
 		// tasks.getTasks();
 		var folderName = $("#nav-tasks .active").attr("data-folder-name");
 
 		var counters = [];
-		// counters["ALL"] = 0;
-		// counters["INBOX"] = 0;
+		counters["ALL"] = 0;
+		counters["INBOX"] = 0;
 		for (var key in tasks.folders) {
 			counters[key] = 0;
 		}
@@ -203,7 +236,8 @@ tasks = {
 			}
 
 			if (
-				(d.FOLDER == folderName) || (folderName == "ALL") // filter by folder
+				(d.FOLDER === folderName) || (folderName === "ALL") // filter by folder
+				|| (d.FOLDER === "") && (folderName === "INBOX") // filter by folder
 				// ((d.FOLDER == folderName) || (d.FOLDER_TILL == folderName) || (folderName == "ALL")) // filter by folder
 				// && filterByGroup // filter by group
 				// && filterByMember // filter by whoami
@@ -315,10 +349,16 @@ tasks = {
 
 	// Формирует и показывает меню из типов задач
 	showTasksTypes: function () {
-		var curapp = this;
 		// var foldersAction = tasks.folders.concat( tasks.foldersActionTill.concat(tasks.foldersAction) );
-		var str = "";
+		var str = "", currentKind;
 		for (var i = 0; i < tasks.folders.length; i++) {
+			if ( currentKind !== tasks.folders[i].kind ) {
+				currentKind = tasks.folders[i].kind;
+				if ( i !== 0) {
+					str += "</ul>";
+				}
+				str += '<ul class="folder-kind folder-kind-' + currentKind + ' nav nav-pills nav-stacked col-md-3 col-sm-3 col-xs-6">';
+			}
 			str += '<li id="tab_' + tasks.folders[i].type + '"'
 				+ ' data-folder-name="' + tasks.folders[i].type + '"'
 				+ ' data-folder-kind="' + tasks.folders[i].kind
@@ -327,6 +367,10 @@ tasks = {
 				+ tasks.folders[i].name
 				+ '&nbsp;<span class="label label-default"></span>'
 				+ '</a></li>';
+
+			if ( i == tasks.folders.length) {
+				str += "</ul>";
+			}
 			
 		};
 		$("#nav-tasks").html(str);
@@ -334,13 +378,10 @@ tasks = {
 	},
 
 	setListener4TaskTool: function () {
-		// var curapp = this;
 		$(".task-tools a")
 			.off()
 			.on("click", function(e) {
 				console.log("onclick", e, this.dataset);
-				// var curapp = this;
-				// var curapp = application;
 				e.preventDefault();
 				if ((this.dataset) && (this.dataset.function)) {
 					// var myFunction = eval('(moveToFolder:);
@@ -352,50 +393,65 @@ tasks = {
 
 	// Устанавливает активность меню (типа задач)
 	setActive: function (e) {
-		var curapp = this;
 		console.log('setActive', e, e.target);
 		$("#nav-tasks li").removeClass("active");
 		$(e.target).closest("li").addClass("active");
 		tasks.showTasks();
 
-	}
+	},
 
+	start: function () {
+		console.log("start");
+		tasks.showTasksTypes();
+		tasks.getTasks();
+		tasks.saveFrameWidth();
+	},
+
+	resizeFrame: function () {
+
+		var currentSize = BX24.getScrollSize();
+		minHeight = currentSize.scrollHeight;
+		
+		if (minHeight < 800) minHeight = 800;
+		BX24.resizeWindow(this.FrameWidth, minHeight);
+	},
+
+	saveFrameWidth: function () {
+		this.FrameWidth = document.getElementById("app").offsetWidth;
+	}
+		
 }
 
-$(document).ready(function () {
-	console.log("1");
-	// app = new application();
+console.log("1");
+// app = new application();
 
-	BX24.init(function (e) {
-		console.log("init", e);
-		return true;
-	});
-
-	console.log("isInit", BX24, BX24.isInit);
-
-	// Подмена функций для тестирования приложения
-	if (typeof BX24.isInit == "undefined") {
-
-		console.log("not Init");
-		BX24.callMethod = BX25.callMethod;
-		// BX24.callMethod = function(method, params, func) {
-		// 	console.log(method, params, func);
-		// 	return "";
-		// }
-	} else {
-		console.log("false start");
-	}
-
-	tasks.showTasksTypes();
-	tasks.getTasks();
-
-
-
-//  	BX24.init = function () {
-//  		console.log("подмена");
-	// app.showTasks();
-//  		return true;
-//  	}
-
+var isInit = false;
+BX24.init(function (e) {
+	console.log("init", e);
+	isInit = true;
+	console.log("install");
+	install.start();
 });
 
+
+// console.log("isInit", BX24, BX24.isInit);
+
+// Подмена функций для тестирования приложения
+setTimeout(
+	function() {
+		if (!isInit) {
+			console.log("not Init");
+			BX24.callMethod = BX25.callMethod;
+			// BX24.callMethod = function(method, params, func) {
+			// 	console.log(method, params, func);
+			// 	return "";
+			// }
+		} else {
+			console.log("false start");
+		}
+		tasks.start();
+	},
+	3000
+);
+
+})();
