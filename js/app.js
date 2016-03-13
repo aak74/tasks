@@ -2,9 +2,9 @@
 // var pathName = "/bitrix/tools/akop.tasks/";
 
 tasks = {
-	userId: 0,
+	userId: 1,
 	tasks: [],
-	tasksFolders: [],
+	taskFolders: [],
 	extData: {
 		tasks: []
 	},
@@ -25,39 +25,27 @@ tasks = {
 // разделить на столбцы
 
 	getTasks: function () {
-		tasks.isReady = 0;
-		BX24.callMethod(
-			'task.item.list', 
-			[],
-			function(result) {
-				if ( result.error() ) {
-					displayErrorMessage('К сожалению, произошла ошибка получения задач. Попробуйте повторить позже');
-					console.error('getTasks error', result.error());
-				} else {
-					var data = result.data();
-					console.log('data', data);
-					
-					for ( var task in data ) {
-						console.log(task.ID);
-						tasks.tasks.push(data[task]);
-					}
-								
-					if ( result.more() ) {
-						result.next();
-					} else {
-						console.log('getTasks. Получены все данные');
-						console.log('tasks', tasks.tasks);
-						tasks.showTasks();
-
-					}
-						
-				}
+		api.getTasks(function(err, res) {
+			console.log('getTasks cb', err, res);
+			if (!err) {
+				tasks.tasks = res;
+				tasks.showTasks();
 			}
-		);
+		});
 	},
 
-	getTasksFolders: function () {
-		tasks.getTasksFolders();
+	getTaskFolders: function () {
+		api.getTaskFolders({'USER_ID': tasks.userId}, function(err, res) {
+			if (!err) {
+				tasks.taskFolders = [];
+				for (var key in res) {
+					tasks.updateFolder(res[key]['TASK_ID'], res[key].FOLDER);
+				}
+	        	console.log('getTaskFolders', tasks.taskFolders);
+
+			}
+		});
+
 /*		
 		BX24.callMethod(
 			'entity.item.get', 
@@ -69,21 +57,21 @@ tasks = {
 			function(result) {
 				if ( result.error() ) {
 					displayErrorMessage('К сожалению, произошла ошибка получения папок задач. Попробуйте повторить позже');
-					console.error('getTasksFolders error', result.error());
+					console.error('getTaskFolders error', result.error());
 				} else {
 					var data = result.data();
 					console.log('data', data);
 					
 					for ( var task in data ) {
 						console.log(task.ID);
-						tasks.tasksFolders[data[task].TASK_ID] = data[task];
+						tasks.taskFolders[data[task].TASK_ID] = data[task];
 					}
 								
 					if ( result.more() ) {
 						result.next();
 					} else {
-						console.log('getTasksFolders. Получены все данные');
-						console.log('tasks', tasks.tasksFolders);
+						console.log('getTaskFolders. Получены все данные');
+						console.log('tasks', tasks.taskFolders);
 						tasks.showTasks();
 
 					}
@@ -126,24 +114,31 @@ tasks = {
 		this.action.call(this, "close");
 	},
 
+	updateFolder: function (taskId, folder) {
+		tasks.taskFolders[ 't' + taskId ] = folder;
+	},
+
 	// Перемещает задачи в другую папку
 	moveToFolder: function () {
 		// tasks.action.call(this, "moveToFolder");
 		var taskId = tasks.getTaskId(this);
 		params = {
-			task_id: taskId,
-			folder: tasks.folders[ this.dataset.folder ]["type"] 
+			USER_ID: tasks.userId,
+			TASK_ID: taskId,
+			FOLDER: tasks.folders[ this.dataset.folder ]["type"] 
 		};
 
 		console.log("moveToFolder", this, taskId, params, tasks.getNumberById(taskId));
-		tasks.tasks[ tasks.getNumberById(taskId) ].FOLDER = params["folder"];
-			tasks.extData.tasks.push( params );
-			// tasks.extData.tasks[ "task_" + taskId ] = {"FOLDER" : params["folder"]};
-		// if (typeof tasks.extData.tasks[ taskId ] == "undefined") {
-
-		// }
-
-		console.log("moveToFolder__tasks.extData", tasks.extData, JSON.stringify(tasks.extData));
+		api.moveToFolder(
+			params, 
+			function(err, res) {
+				// console.log('moveToFolder taskId', taskId);
+				if (!err) {
+					tasks.updateFolder(res.TASK_ID, res.FOLDER)
+					tasks.showTasks();
+				}
+			}
+		);
 	},
 
 	getTaskId: function (obj) {
@@ -218,26 +213,28 @@ tasks = {
 
 		var counters = [];
 		counters["ALL"] = 0;
-		counters["INBOX"] = 0;
 		for (var key in tasks.folders) {
-			counters[key] = 0;
+			counters[tasks.folders[key].type] = 0;
 		}
 
 
 		var str = "";
 		for (var i = 0; i < tasks.tasks.length; i++) {
 			var d = tasks.tasks[i];
+			d.FOLDER = ( ( tasks.taskFolders['t' + d.ID] ) 
+				? tasks.taskFolders['t' + d.ID]
+				: "INBOX"
+			);
 
-			if (1) {
-			// if (filterByMember && filterByGroup && filterByResponsible && filterByTag) {
-				counters["ALL"]++;
-				counters[d.FOLDER]++;
-				counters[d.FOLDER_TILL]++;
-			}
+			counters["ALL"]++;
+			counters[d.FOLDER]++;
+			// counters[d.FOLDER_TILL]++;
+
+			// console.log('showTasks', folderName, d.FOLDER)
 
 			if (
 				(d.FOLDER === folderName) || (folderName === "ALL") // filter by folder
-				|| (d.FOLDER === "") && (folderName === "INBOX") // filter by folder
+				|| (d.FOLDER === undefined) && (folderName === "INBOX") // filter by folder
 				// ((d.FOLDER == folderName) || (d.FOLDER_TILL == folderName) || (folderName == "ALL")) // filter by folder
 				// && filterByGroup // filter by group
 				// && filterByMember // filter by whoami
@@ -257,7 +254,7 @@ tasks = {
 					// + "</div>";
 
 		/* Task title */
-				str += "<div class=\"task-main col-md-5\">"
+				str += "<div class=\"task-main col-md-5 col-sm-4\">"
 				 	+ "<span class=\"label label-success\">" + d.ID + "</span>"
 					+ "<div class=\"task-title\">"
 					+ "<a href=\"/company/personal/user/" + tasks.userId + "/tasks/task/view/" + d.ID + "/\">" + d.TITLE + "</a>"
@@ -266,7 +263,7 @@ tasks = {
 
 
 				/* Actions */
-				str += "<div class=\"task-tools col-md-3\">";
+				str += "<div class=\"task-tools col-md-3 col-sm-3\">";
 
 				if (!d.ACTION_APPROVE && !d.ACTION_DISAPPROVE && (d.RESPONSIBLE_ID == tasks.userId)) 
 					str += "<a href=\"#\" class=\"\" data-function=\"tasks.close\"><span class=\"glyphicon glyphicon-flag\"></span>&nbsp;Завершить задачу</a><br/>";
@@ -299,17 +296,17 @@ tasks = {
 				str += "</ul></div></div>";
 
 				/* Deadline */
-					if (d.DEADLINE) deadline = d.DEADLINE.split(' ');
-				str += "<div class=\"task-deadline-col col-md-2\">"
-					+ ((d.DEADLINE) 
+				if (d.DEADLINE !== '') deadline = d.DEADLINE.split('T');
+				str += "<div class=\"task-deadline-col col-md-2 col-sm-3\">"
+					+ ( (d.DEADLINE) 
 						? "<div class=\"task-deadline" + ((d.OVERDUED) ? " task-status-overdue" : "") + "\">"
 							+ "<span class=\"glyphicon glyphicon-time\"></span>&nbsp;" 
 							+ "<span>" 
-							+ "<span class=\"task-deadline-date webform-field-action-link\" "
+							+ "<span class=\"task-deadline-date\" "
 							+ "onclick=\"tasks.onDeadlineChangeClick(" + d.ID + ", this, '" + d.DEADLINE + "');\">" + deadline[0]
 							// + "onclick=\"tasksListNS.onDeadlineChangeClick(" + d.ID + ", this, '" + d.DEADLINE + "');\">" + deadline[0]
 							+ "</span>&nbsp;"
-							+ "<span class=\"task-deadline-time webform-field-action-link\" "
+							+ "<span class=\"task-deadline-time\" "
 							+ "onclick=\"tasks.onDeadlineChangeClick(" + d.ID + ", this, '" + d.DEADLINE + "');\">" + deadline[1]
 							// + "onclick=\"tasksListNS.onDeadlineChangeClick(" + d.ID + ", this, '" + d.DEADLINE + "');\">" + deadline[1]
 							+ "</span>"
@@ -320,7 +317,7 @@ tasks = {
 					+ "</div>";
 
 				/* Task team */
-				str += "<div class=\"task-team col-md-2\">" + tasks.getName(d.CREATED_BY_LAST_NAME, d.CREATED_BY_NAME, d.CREATED_BY_LOGIN) + "<br/>"
+				str += "<div class=\"task-team col-md-2 col-sm-2\">" + tasks.getName(d.CREATED_BY_LAST_NAME, d.CREATED_BY_NAME, d.CREATED_BY_LOGIN) + "<br/>"
 					+ "<span class=\"glyphicon glyphicon-hand-down\"></span>&nbsp;" + "<br/>"
 					+ tasks.getName(d.RESPONSIBLE_LAST_NAME, d.RESPONSIBLE_NAME, d.RESPONSIBLE_LOGIN) + "</div>";
 
@@ -344,6 +341,12 @@ tasks = {
 			str += "</div>";			
 		};
 		$(".tasks").html(str);
+		console.log('counters', counters);
+		for (var key in counters) {
+			if ( counters[key] > 0) {
+				$('#tab_' + key + ' span').text(counters[key]);
+			}
+		};
 		tasks.setListener4TaskTool();
 	},
 
@@ -360,6 +363,7 @@ tasks = {
 				str += '<ul class="folder-kind folder-kind-' + currentKind + ' nav nav-pills nav-stacked col-md-3 col-sm-3 col-xs-6">';
 			}
 			str += '<li id="tab_' + tasks.folders[i].type + '"'
+				+ ( ( tasks.folders[i].type == "INBOX" ) ? ' class="active"' : '' )
 				+ ' data-folder-name="' + tasks.folders[i].type + '"'
 				+ ' data-folder-kind="' + tasks.folders[i].kind
 				+ '">'
@@ -403,8 +407,17 @@ tasks = {
 	start: function () {
 		console.log("start");
 		tasks.showTasksTypes();
-		tasks.getTasks();
-		tasks.saveFrameWidth();
+		addScript(
+			( isInit
+				? '/api.js'
+				: '/_stub/api.js'
+			),
+			function () {
+				tasks.getTaskFolders();
+				tasks.getTasks();
+				tasks.saveFrameWidth();
+			}
+		);
 	},
 
 	resizeFrame: function () {
@@ -437,21 +450,32 @@ BX24.init(function (e) {
 // console.log("isInit", BX24, BX24.isInit);
 
 // Подмена функций для тестирования приложения
-setTimeout(
-	function() {
-		if (!isInit) {
-			console.log("not Init");
-			BX24.callMethod = BX25.callMethod;
-			// BX24.callMethod = function(method, params, func) {
-			// 	console.log(method, params, func);
-			// 	return "";
-			// }
-		} else {
-			console.log("false start");
+	        	// tasks.showTasks();
+
+function addScript(src, callback) {
+	var script = document.createElement('script');
+    script.src = src;
+	var s = document.getElementsByTagName('script')[0]
+	s.parentNode.insertBefore(script, s);
+
+	var loaded = false;
+
+	function onload() {
+		if (loaded) return; // повторный вызов
+		loaded = true;
+		callback();
+	}
+
+	script.onload = onload; // все браузеры, IE с версии 9
+
+	script.onreadystatechange = function() { // IE8-
+		if (this.readyState == 'loaded' || this.readyState == 'complete') {
+			setTimeout(onload, 0);
 		}
-		tasks.start();
-	},
-	3000
-);
+	};
+
+}
+
+setTimeout(tasks.start,	3000);
 
 })();

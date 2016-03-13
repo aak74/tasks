@@ -113,8 +113,7 @@ ul.folder-kind-folder > li.active > a {
 
 #nav-tasks .label {
   position: absolute !important;
-  right: -0.9em !important;
-  top: -0.5em !important;
+  right: 4px !important;
   z-index: 100;
   font-size: 90%;
 }
