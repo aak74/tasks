@@ -8,6 +8,7 @@ tasks = {
 	extData: {
 		tasks: []
 	},
+	folderNames: [],
 	folders: [
 		{"type": "INBOX", "name": "Входящие", "kind": "system"}, // 1
 		{"type": "ALL", "name": "Все", "kind": "system"}, // 1
@@ -28,58 +29,59 @@ tasks = {
 		api.getTasks(function(err, res) {
 			console.log('getTasks cb', err, res);
 			if (!err) {
-				tasks.tasks = res;
-				tasks.showTasks();
+				// tasks.tasks = res;
+				for (var i in res) {
+					console.log(res[i]);
+					res[i].FOLDER_TILL = "";
+					if (res[i].DEADLINE !== "" ) {
+						deadline = moment(res[i].DEADLINE);
+						today = moment().endOf('day');
+						tommorow = moment().endOf('day').add(1, 'days');
+						week = moment().endOf('day').add(7, 'days');
+						// console.log(today, tommorow, week);
+						if ( moment(deadline).isSameOrBefore(today) ) {
+							res[i].FOLDER_TILL = "TODAY";
+							res[i].OVERDUED = true;
+						} else if ( moment(deadline).isSameOrBefore(tommorow) ) {
+							res[i].FOLDER_TILL = "TOMORROW";
+						} else if ( moment(deadline).isSameOrBefore(week) ) {
+							res[i].FOLDER_TILL = "WEEK";
+						} else {
+							// res[i].FOLDER_TILL = "NOT_SOON";
+						};
+						
+						// res[i].DEADLINE_DATE = deadline.format('DD.MM.YYYY');
+						// res[i].DEADLINE_TIME = deadline.format('H:mm');
+						res[i].DEADLINE = deadline.format("DD.MM.YYYY H:mm");
+					}
+					if (res[i].CLOSED_DATE) {
+						res[i].CLOSED_DATE = moment(res[i].CLOSED_DATE).format("DD.MM.YYYY H:mm")
+					}
+					tasks.tasks.push(res[i]);
+					// tasks.tasks[res[i].ID] = res[i];
+				};
+				// console.log(tasks.tasks);
+				// tasks.tasks.each(function (i, d) {
+				// });
+				// err = res = null;
+				tasks.getTaskFolders(tasks.showTasks);
 			}
 		});
 	},
 
-	getTaskFolders: function () {
+	getTaskFolders: function (cb) {
 		api.getTaskFolders({'USER_ID': tasks.userId}, function(err, res) {
 			if (!err) {
+	        	console.log('app__getTaskFolders__', err, res);
 				tasks.taskFolders = [];
 				for (var key in res) {
 					tasks.updateFolder(res[key]['TASK_ID'], res[key].FOLDER);
 				}
 	        	console.log('getTaskFolders', tasks.taskFolders);
+	        	cb();
 
 			}
 		});
-
-/*		
-		BX24.callMethod(
-			'entity.item.get', 
-			{
-			    ENTITY: 'tasks',
-			    SORT: {},
-			    FILTER: {'TASK_ID':'1'}
-			},
-			function(result) {
-				if ( result.error() ) {
-					displayErrorMessage('К сожалению, произошла ошибка получения папок задач. Попробуйте повторить позже');
-					console.error('getTaskFolders error', result.error());
-				} else {
-					var data = result.data();
-					console.log('data', data);
-					
-					for ( var task in data ) {
-						console.log(task.ID);
-						tasks.taskFolders[data[task].TASK_ID] = data[task];
-					}
-								
-					if ( result.more() ) {
-						result.next();
-					} else {
-						console.log('getTaskFolders. Получены все данные');
-						console.log('tasks', tasks.taskFolders);
-						tasks.showTasks();
-
-					}
-						
-				}
-			}
-		); 
-	*/
 	},
 
 	getTask: function (obj) {
@@ -210,7 +212,9 @@ tasks = {
 	showTasks: function () {
 		// tasks.getTasks();
 		var folderName = $("#nav-tasks .active").attr("data-folder-name");
+		console.log('showTasks folderName', folderName);
 
+		/* Обнуляем все счетчики */
 		var counters = [];
 		counters["ALL"] = 0;
 		for (var key in tasks.folders) {
@@ -228,14 +232,14 @@ tasks = {
 
 			counters["ALL"]++;
 			counters[d.FOLDER]++;
-			// counters[d.FOLDER_TILL]++;
+			counters[d.FOLDER_TILL]++;
 
 			// console.log('showTasks', folderName, d.FOLDER)
 
 			if (
-				(d.FOLDER === folderName) || (folderName === "ALL") // filter by folder
+				// (d.FOLDER === folderName) || (folderName === "ALL") // filter by folder
+				((d.FOLDER == folderName) || (d.FOLDER_TILL == folderName) || (folderName == "ALL")) // filter by folder
 				|| (d.FOLDER === undefined) && (folderName === "INBOX") // filter by folder
-				// ((d.FOLDER == folderName) || (d.FOLDER_TILL == folderName) || (folderName == "ALL")) // filter by folder
 				// && filterByGroup // filter by group
 				// && filterByMember // filter by whoami
 				// && filterByResponsible 
@@ -259,6 +263,16 @@ tasks = {
 					+ "<div class=\"task-title\">"
 					+ "<a href=\"/company/personal/user/" + tasks.userId + "/tasks/task/view/" + d.ID + "/\">" + d.TITLE + "</a>"
 					+ "</div>"
+					+ ( (folderName == "ALL")
+						? "<div class=\"task-title-folder\">"
+							+ tasks.folderNames[d.FOLDER]
+							+ ( (d.FOLDER_TILL !== "") 
+								?  " / " + tasks.folderNames[d.FOLDER_TILL] 
+								: ""
+							)
+							+ "</div>"
+						: ""
+					)
 					+ "</div>";
 
 
@@ -289,31 +303,27 @@ tasks = {
 					+ "<ul class=\"dropdown-menu\" role=\"menu\">" ;
 
 				for (var key in tasks.folders) {
-					if (tasks.folders[key].kind == "folder") {
+					if ( (tasks.folders[key].kind === "folder") || (tasks.folders[key].kind === "importance")  ) {
 						str += "<li><a href=\"#\" data-function=\"tasks.moveToFolder\" data-folder=\"" + key + "\">" + tasks.folders[key]["name"] + "</a></li>";
 					}
 				}
 				str += "</ul></div></div>";
 
 				/* Deadline */
-				if (d.DEADLINE !== '') deadline = d.DEADLINE.split('T');
+				// if (d.DEADLINE !== '') deadline = d.DEADLINE.split('T');
 				str += "<div class=\"task-deadline-col col-md-2 col-sm-3\">"
 					+ ( (d.DEADLINE) 
 						? "<div class=\"task-deadline" + ((d.OVERDUED) ? " task-status-overdue" : "") + "\">"
 							+ "<span class=\"glyphicon glyphicon-time\"></span>&nbsp;" 
-							+ "<span>" 
 							+ "<span class=\"task-deadline-date\" "
-							+ "onclick=\"tasks.onDeadlineChangeClick(" + d.ID + ", this, '" + d.DEADLINE + "');\">" + deadline[0]
-							// + "onclick=\"tasksListNS.onDeadlineChangeClick(" + d.ID + ", this, '" + d.DEADLINE + "');\">" + deadline[0]
-							+ "</span>&nbsp;"
-							+ "<span class=\"task-deadline-time\" "
-							+ "onclick=\"tasks.onDeadlineChangeClick(" + d.ID + ", this, '" + d.DEADLINE + "');\">" + deadline[1]
-							// + "onclick=\"tasksListNS.onDeadlineChangeClick(" + d.ID + ", this, '" + d.DEADLINE + "');\">" + deadline[1]
-							+ "</span>"
+							+ "onclick=\"tasks.deadlineChangeClick(" + d.ID + ", this, '" + d.DEADLINE + "');\">" + d.DEADLINE
 							+ "</span>"
 							+ "</div>" 
 						: "")
-					+ ((d.CLOSED_DATE && (d.STATUS == 4)) ? "<div><span class=\"glyphicon glyphicon-flag\"></span>&nbsp;" + d.CLOSED_DATE + "</div>" : "")
+					+ ((d.CLOSED_DATE && (d.STATUS == 4)) 
+						? "<div><span class=\"glyphicon glyphicon-flag\"></span>&nbsp;"  + d.CLOSED_DATE + "</div>" 
+						: ""
+					)
 					+ "</div>";
 
 				/* Task team */
@@ -407,13 +417,17 @@ tasks = {
 	start: function () {
 		console.log("start");
 		tasks.showTasksTypes();
+		for (var key in tasks.folders) {
+			// console.log('tasks.folders[key]', key, tasks.folders[key]);
+			tasks.folderNames[tasks.folders[key].type] = tasks.folders[key].name;
+		}
+
 		addScript(
 			( isInit
-				? '/api.js'
+				? window.location.pathname.replace("index.html", "") + 'js/api.js'
 				: '/_stub/api.js'
 			),
 			function () {
-				tasks.getTaskFolders();
 				tasks.getTasks();
 				tasks.saveFrameWidth();
 			}
@@ -442,10 +456,10 @@ var isInit = false;
 BX24.init(function (e) {
 	console.log("init", e);
 	isInit = true;
-	console.log("install");
-	install.start();
+	console.log("tasks start");
 });
 
+setTimeout(tasks.start,	3000);
 
 // console.log("isInit", BX24, BX24.isInit);
 
@@ -476,6 +490,5 @@ function addScript(src, callback) {
 
 }
 
-setTimeout(tasks.start,	3000);
 
 })();

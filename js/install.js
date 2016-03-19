@@ -52,9 +52,6 @@ var install = {
 	}
 }
 
-console.log("start", BX24);
-var isInit = false;
-
 BX24.init(function (e) {
 	console.log("init", e);
 	isInit = true;

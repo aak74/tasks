@@ -56,6 +56,8 @@ api = {
 	        	cb(err.status, null);
 	        });
 
+    }
+/*    
 	},
 
 	callMethod: function (method, params, func) {
@@ -75,8 +77,8 @@ api = {
 		}
 		return "";
 	}
-	
+*/	
 }
 console.log('_stub/api.js loaded');
-BX24.callMethod = api.callMethod;
+// BX24.callMethod = api.callMethod;
 })();

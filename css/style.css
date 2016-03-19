@@ -136,3 +136,8 @@ ul.folder-kind-folder > li.active > a {
 	color: #cc2020 !important;
 }
 
+
+
+.task-deadline-date {
+	cursor: pointer;
+}
